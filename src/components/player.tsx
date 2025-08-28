@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import Files from './files';
+import Files from './library/files';
 
 export default function Player() {
   const [files, setFiles] = useState<File[]>([]);
