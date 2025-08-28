@@ -1,5 +1,6 @@
-import { PlaySquareIcon } from 'lucide-react';
+import { usePlayAudio } from '@/hooks/useAudio';
 
+import AudioActions from './audio-actions';
 import UploadFile from './upload-file';
 
 interface FilesProps {
@@ -8,32 +9,31 @@ interface FilesProps {
 }
 
 export default function Files({ files, onFileSelect }: FilesProps) {
+  const { currentlyPlayingFile, isPlaying, handlePlay, handlePause, handleResume, handleStop } = usePlayAudio();
+
   if (files.length === 0) {
     return <UploadFile selectedFiles={files} onFileSelect={onFileSelect} />;
   }
 
-  const handlePlay = (file: File) => async () => {
-    const ctx = new window.AudioContext();
-
-    const source = ctx.createBufferSource();
-    const arrayBuffer = await file.arrayBuffer();
-    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-
-    source.buffer = audioBuffer;
-    source.connect(ctx.destination);
-    source.start();
-  };
-
   return (
-    <div>
-      <h3 className="mb-2">Uploaded Files</h3>
-      <ul className="">
+    <div className="outline outline-blue-400 rounded-xl p-4">
+      <h3 className="mb-2 text-lg font-semibold">Library</h3>
+      <ul className="divide-y divide-gray-400">
         {files.map((file) => (
-          <li className="p-2 flex justify-between items-center outline outline-gray-400" key={file.name}>
+          <li className="py-2 flex justify-between items-center group" key={file.name}>
             {file.name}
-            <button onClick={handlePlay(file)}>
-              <PlaySquareIcon />
-            </button>
+
+            <div className="flex gap-2">
+              <AudioActions
+                file={file}
+                currentlyPlayingFile={currentlyPlayingFile}
+                isPlaying={isPlaying}
+                handlePlay={handlePlay}
+                handlePause={handlePause}
+                handleResume={handleResume}
+                handleStop={handleStop}
+              />
+            </div>
           </li>
         ))}
       </ul>
