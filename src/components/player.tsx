@@ -3,7 +3,6 @@
 import { useState } from 'react';
 
 import Files from './files';
-import UploadFile from './upload-file';
 
 export default function Player() {
   const [files, setFiles] = useState<File[]>([]);

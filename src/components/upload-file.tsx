@@ -1,7 +1,8 @@
-import { cn } from '@/lib/utils/cn';
-import { CloudUpload } from 'lucide-react';
 import { ChangeEvent, useEffect, useRef } from 'react';
 import { useDropArea } from 'react-use';
+import { CloudUpload } from 'lucide-react';
+
+import { cn } from '@/lib/utils/cn';
 
 interface UploadFileProps {
   selectedFiles: File[];

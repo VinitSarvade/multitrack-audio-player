@@ -10,11 +10,12 @@
     "@ianvs/prettier-plugin-sort-imports"
   ],
   "importOrder": [
-    "^@core/(.*)$",
+    "^react(.*)$",
+    "^next(.*)$",
+    "<BUILTIN_MODULES>",
+    "<THIRD_PARTY_MODULES>",
     "",
-    "^@server/(.*)$",
-    "",
-    "^@ui/(.*)$",
+    "^@(.*)$",
     "",
     "^[./]"
   ],
