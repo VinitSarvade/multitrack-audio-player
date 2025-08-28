@@ -1,20 +1,31 @@
-import { ChangeEvent, useEffect, useRef } from 'react';
+import { ChangeEvent, useEffect, useId, useRef } from 'react';
 import { useDropArea } from 'react-use';
 import { CloudUpload } from 'lucide-react';
 
 import { cn } from '@/lib/utils/cn';
 
 interface UploadFileProps {
+  title?: string;
   selectedFiles: File[];
+  className?: string;
+  multiple?: boolean;
   onFileSelect: (files: File[]) => void;
 }
 
-export default function UploadFile({ selectedFiles, onFileSelect }: UploadFileProps) {
+export default function UploadFile({
+  title = 'Choose files or drop here to upload',
+  selectedFiles,
+  multiple = true,
+  className,
+  onFileSelect,
+}: UploadFileProps) {
   const [bond, state] = useDropArea({
     onFiles: (files) => onFileSelect(files),
   });
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const id = useId();
 
   useEffect(() => {
     if (inputRef.current && window.DataTransfer) {
@@ -44,26 +55,27 @@ export default function UploadFile({ selectedFiles, onFileSelect }: UploadFilePr
       {...bond}
       className={cn(
         'w-full h-full rounded-xl outline-dashed outline-blue-400 outline-2 relative transition-colors hover:bg-blue-400/50',
-        { 'bg-gray-400/75': state.over }
+        { 'bg-gray-400/75': state.over },
+        className
       )}
     >
       <input
         ref={inputRef}
         type="file"
         data-testid="file-uploader-input"
-        id="file"
+        id={id}
         onChange={handleFileSelect}
         className="opacity-0 invisible absolute w-0 h-0"
         accept="audio/*"
-        multiple={true}
+        multiple={multiple}
       />
       <label
-        htmlFor="file"
+        htmlFor={id}
         className="text-white grid place-content-center place-items-center w-full h-full hover:cursor-pointer gap-2"
         data-testid="file-uploader-label"
       >
         <CloudUpload />
-        Choose files or drop here to upload
+        {title}
       </label>
     </div>
   );

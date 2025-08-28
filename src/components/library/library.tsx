@@ -1,5 +1,5 @@
+import UploadFile from '../upload-file';
 import AudioActions from './audio-actions';
-import UploadFile from './upload-file';
 
 interface FilesProps {
   files: File[];

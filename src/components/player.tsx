@@ -1,21 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef } from 'react';
 
-import Library from './library/library';
+import Tracks, { TracksActions } from './tracks/tracks';
 
 export default function Player() {
-  const [libraryFiles, setLibraryFiles] = useState<File[]>([]);
+  const tracksRef = useRef<TracksActions>(null);
 
   return (
-    <>
-      <div className="grid grid-cols-3 gap-8">
-        <Library files={libraryFiles} onFileSelect={setLibraryFiles} />
-        <div className="col-span-2">Player</div>
+    <div className="h-[75vh] aspect-[4/3] p-16 outline-2 outline-blue-400 grid grid-rows-3 gap-8">
+      <div className="flex gap-2 justify-evenly">
+        <button onClick={() => tracksRef.current?.play()}>Play</button>
+        <button onClick={() => tracksRef.current?.pause()}>Pause</button>
+        <button onClick={() => tracksRef.current?.stop()}>Stop</button>
+        <button onClick={() => tracksRef.current?.resume()}>Resume</button>
       </div>
-      <div className="row-span-2 border-t-2 border-blue-400">
-        <h3 className="mt-4">Tracks</h3>
+
+      <div className="row-span-2 border-t-2 pt-8 border-blue-400">
+        <Tracks ref={tracksRef} />
       </div>
-    </>
+    </div>
   );
 }
