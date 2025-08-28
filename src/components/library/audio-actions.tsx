@@ -1,13 +1,9 @@
 import { PauseIcon, PlayIcon, StopCircleIcon } from 'lucide-react';
 
+import { usePlayAudio } from '@/hooks/useAudio';
+
 interface AudioActionsProps {
   file: File;
-  currentlyPlayingFile: string | null;
-  isPlaying: boolean;
-  handlePlay: (file: File) => () => Promise<void>;
-  handlePause: () => void;
-  handleResume: () => void;
-  handleStop: () => void;
 }
 
 const getAudioButton = (clickHandler: () => void, icon: React.ReactNode) => (
@@ -16,15 +12,9 @@ const getAudioButton = (clickHandler: () => void, icon: React.ReactNode) => (
   </button>
 );
 
-export default function AudioActions({
-  file,
-  currentlyPlayingFile,
-  isPlaying,
-  handlePlay,
-  handlePause,
-  handleResume,
-  handleStop,
-}: AudioActionsProps) {
+export default function AudioActions({ file }: AudioActionsProps) {
+  const { currentlyPlayingFile, isPlaying, handlePlay, handlePause, handleResume, handleStop } = usePlayAudio();
+
   const stopButton = getAudioButton(handleStop, <StopCircleIcon size={20} />);
   const playButton = getAudioButton(handlePlay(file), <PlayIcon size={20} />);
   const pauseButton = getAudioButton(handlePause, <PauseIcon size={20} />);

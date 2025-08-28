@@ -1,5 +1,3 @@
-import { usePlayAudio } from '@/hooks/useAudio';
-
 import AudioActions from './audio-actions';
 import UploadFile from './upload-file';
 
@@ -8,9 +6,7 @@ interface FilesProps {
   onFileSelect: (files: File[]) => void;
 }
 
-export default function Files({ files, onFileSelect }: FilesProps) {
-  const { currentlyPlayingFile, isPlaying, handlePlay, handlePause, handleResume, handleStop } = usePlayAudio();
-
+export default function Library({ files, onFileSelect }: FilesProps) {
   if (files.length === 0) {
     return <UploadFile selectedFiles={files} onFileSelect={onFileSelect} />;
   }
@@ -24,15 +20,7 @@ export default function Files({ files, onFileSelect }: FilesProps) {
             {file.name}
 
             <div className="flex gap-2">
-              <AudioActions
-                file={file}
-                currentlyPlayingFile={currentlyPlayingFile}
-                isPlaying={isPlaying}
-                handlePlay={handlePlay}
-                handlePause={handlePause}
-                handleResume={handleResume}
-                handleStop={handleStop}
-              />
+              <AudioActions file={file} />
             </div>
           </li>
         ))}
