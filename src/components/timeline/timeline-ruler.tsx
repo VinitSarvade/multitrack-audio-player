@@ -79,7 +79,7 @@ export default function TimelineRuler({
   const playheadPosition = currentTime * pixelsPerSecond;
 
   return (
-    <div className="relative h-12 cursor-pointer" onClick={handleClick}>
+    <div className="relative h-12 cursor-pointer border-b border-border" onClick={handleClick}>
       <div className="relative" style={{ width: totalWidth, minWidth: '100%' }}>
         {generateMarkers()}
 

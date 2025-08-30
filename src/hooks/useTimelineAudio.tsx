@@ -167,6 +167,68 @@ export function useTimelineAudio() {
     [state.segments, state.isPlaying]
   );
 
+  // Move segment to different track
+  const moveSegmentToTrack = useCallback(
+    (segmentId: string, newTrackId: string, newStartTime: number): boolean => {
+      const segment = state.segments.get(segmentId);
+      if (!segment) {
+        console.error(`Cannot find segment ${segmentId} to move`);
+        return false;
+      }
+
+      const newEndTime = newStartTime + segment.duration;
+      console.log(
+        `Moving segment ${segmentId} (${segment.file.name}) from track ${segment.trackId} to track ${newTrackId} at ${newStartTime}s`
+      );
+
+      // Check for overlaps in the destination track (excluding self)
+      if (hasOverlap(state.segments, newTrackId, newStartTime, newEndTime, segmentId)) {
+        console.log(`Cannot move segment ${segmentId} to track ${newTrackId} at ${newStartTime}s - would overlap`);
+        return false; // Cannot move to this position
+      }
+
+      setState((prev) => {
+        const newSegments = new Map(prev.segments);
+        newSegments.set(segmentId, {
+          ...segment,
+          trackId: newTrackId,
+          startTime: newStartTime,
+          endTime: newEndTime,
+        });
+
+        // Recalculate timeline duration
+        let maxEndTime = 0;
+        newSegments.forEach((seg) => {
+          maxEndTime = Math.max(maxEndTime, seg.endTime);
+        });
+
+        return {
+          ...prev,
+          segments: newSegments,
+          duration: Math.max(prev.duration, maxEndTime),
+        };
+      });
+
+      // If currently playing, reschedule playback to reflect the new segment position
+      if (state.isPlaying) {
+        // Defer to next tick to ensure state update has been applied
+        setTimeout(() => {
+          try {
+            playRef.current?.();
+          } catch (e) {
+            console.error('Error rescheduling playback after track move:', e);
+          }
+        }, 0);
+      }
+
+      console.log(
+        `Successfully moved segment ${segmentId} to track ${newTrackId} at ${newStartTime}s - ${newEndTime}s`
+      );
+      return true;
+    },
+    [state.segments, state.isPlaying]
+  );
+
   // Remove segment
   const removeSegment = useCallback(
     (segmentId: string) => {
@@ -459,6 +521,7 @@ export function useTimelineAudio() {
     ...state,
     addSegment,
     moveSegment,
+    moveSegmentToTrack,
     removeSegment,
     play,
     pause,

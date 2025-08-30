@@ -69,6 +69,7 @@ export default function Timeline({ ref, tracks, onAddTrack, onRemoveTrack, onPla
         onFileUpload={handleFileUpload}
         onRemoveTrack={onRemoveTrack}
         onMoveSegment={timeline.moveSegment}
+        onMoveSegmentToTrack={timeline.moveSegmentToTrack}
         onRemoveSegment={timeline.removeSegment}
         onSeek={timeline.seekTo}
         seekMaxDuration={timeline.duration}

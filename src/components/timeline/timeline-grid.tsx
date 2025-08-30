@@ -2,6 +2,7 @@ import { RefObject } from 'react';
 import { TrashIcon } from 'lucide-react';
 
 import { AudioSegment } from '@/hooks/useTimelineAudio';
+import { DndContext, type DragEndEvent } from '@dnd-kit/core';
 
 import UploadFile from '../upload-file';
 import TimelineRuler from './timeline-ruler';
@@ -20,12 +21,14 @@ interface TimelineGridProps {
   onFileUpload: (trackId: string, files: File[]) => void;
   onRemoveTrack: (trackId: string) => void;
   onMoveSegment: (segmentId: string, newStartTime: number) => boolean;
+  onMoveSegmentToTrack: (segmentId: string, newTrackId: string, newStartTime: number) => boolean;
   onRemoveSegment: (segmentId: string) => void;
   onSeek: (time: number) => void;
   seekMaxDuration: number;
 }
 
 const PIXELS_PER_SECOND = 4;
+const TRACK_HEIGHT = 80;
 
 export default function TimelineGrid({
   tracks,
@@ -40,10 +43,40 @@ export default function TimelineGrid({
   onFileUpload,
   onRemoveTrack,
   onMoveSegment,
+  onMoveSegmentToTrack,
   onRemoveSegment,
   onSeek,
   seekMaxDuration,
 }: TimelineGridProps) {
+  const handleDragEnd = (event: DragEndEvent) => {
+    const segmentId = String(event.active.id);
+    const segment = Array.from(segments.values()).find((s) => s.id === segmentId);
+    if (!segment) return;
+
+    const deltaX = event.delta.x || 0;
+    const deltaY = event.delta.y || 0;
+
+    const newStartTime = Math.max(0, segment.startTime + deltaX / PIXELS_PER_SECOND);
+
+    // Check if there's significant vertical movement (cross-track drop)
+    const trackMovement = Math.round(deltaY / TRACK_HEIGHT);
+
+    if (Math.abs(trackMovement) >= 1) {
+      const currentTrackIndex = tracks.findIndex((t) => t.id === segment.trackId);
+      const newTrackIndex = currentTrackIndex + trackMovement;
+
+      // Validate new track index
+      if (newTrackIndex >= 0 && newTrackIndex < tracks.length) {
+        const newTrackId = tracks[newTrackIndex].id;
+        console.log(`Moving segment ${segmentId} from track ${segment.trackId} to track ${newTrackId}`);
+        onMoveSegmentToTrack(segmentId, newTrackId, newStartTime);
+        return;
+      }
+    }
+
+    onMoveSegment(segmentId, newStartTime); // Fallback
+  };
+
   return (
     <div className="flex-1 overflow-hidden">
       <div className="h-full overflow-y-auto">
@@ -98,25 +131,27 @@ export default function TimelineGrid({
                 contentWidth={contentWidth}
               />
 
-              {tracks.map((track) => (
-                <TimelineTrack
-                  key={track.id}
-                  trackId={track.id}
-                  trackName={track.name || `Track ${track.id}`}
-                  segments={Array.from(segments.values()).filter((segment) => segment.trackId === track.id)}
-                  currentTime={currentTime}
-                  pixelsPerSecond={PIXELS_PER_SECOND}
-                  timeToPixels={timeToPixels}
-                  pixelsToTime={pixelsToTime}
-                  onFileUpload={(files) => onFileUpload(track.id, files)}
-                  onRemoveTrack={() => onRemoveTrack(track.id)}
-                  onMoveSegment={onMoveSegment}
-                  onRemoveSegment={onRemoveSegment}
-                  isPlaying={isPlaying}
-                  contentWidth={contentWidth}
-                  renderHeader={false}
-                />
-              ))}
+              <DndContext onDragEnd={handleDragEnd}>
+                {tracks.map((track) => (
+                  <TimelineTrack
+                    key={track.id}
+                    trackId={track.id}
+                    trackName={track.name || `Track ${track.id}`}
+                    segments={Array.from(segments.values()).filter((segment) => segment.trackId === track.id)}
+                    currentTime={currentTime}
+                    pixelsPerSecond={PIXELS_PER_SECOND}
+                    timeToPixels={timeToPixels}
+                    pixelsToTime={pixelsToTime}
+                    onFileUpload={(files) => onFileUpload(track.id, files)}
+                    onRemoveTrack={() => onRemoveTrack(track.id)}
+                    onMoveSegment={onMoveSegment}
+                    onRemoveSegment={onRemoveSegment}
+                    isPlaying={isPlaying}
+                    contentWidth={contentWidth}
+                    renderHeader={false}
+                  />
+                ))}
+              </DndContext>
             </div>
           </div>
         </div>

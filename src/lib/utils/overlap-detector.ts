@@ -1,4 +1,4 @@
-import { AudioSegment } from '@/hooks/useTimelineAudio';
+import type { AudioSegment } from '@/hooks/useTimelineAudio';
 
 export function hasOverlap(
   segments: Map<string, AudioSegment>,

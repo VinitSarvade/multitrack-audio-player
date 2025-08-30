@@ -1,4 +1,4 @@
-import { AudioSegment } from '@/hooks/useTimelineAudio';
+import type { AudioSegment } from '@/hooks/useTimelineAudio';
 
 export function stopAllSources(segments: Map<string, AudioSegment>): void {
   segments.forEach((segment) => {
