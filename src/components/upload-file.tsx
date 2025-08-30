@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useId, useRef } from 'react';
 import { useDropArea } from 'react-use';
 import { CloudUpload } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils/cn';
 
@@ -43,7 +44,7 @@ export default function UploadFile({
     const selected = Array.from(e.target.files);
 
     if (selected.some((file) => !file.type.startsWith('audio/'))) {
-      alert('Please select only audio files');
+      toast.error('Please select only audio files');
       return;
     }
 
