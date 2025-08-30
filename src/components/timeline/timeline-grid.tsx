@@ -90,7 +90,6 @@ export default function TimelineGrid({
           <div className="col-span-3 border-b border-border">
             <div className="overflow-x-auto bg-surface" ref={scrollContainerRef}>
               <TimelineRuler
-                mode="embedded"
                 duration={displayDuration}
                 currentTime={currentTime}
                 pixelsPerSecond={PIXELS_PER_SECOND}

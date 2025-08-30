@@ -34,22 +34,9 @@ export default function Track({ track, removeTrack, updateTrack, audioState }: T
             </div>
           );
         })}
-
-        {track.files.length === 0 && (
-          <UploadFile selectedFiles={track.files} onFileSelect={(files) => updateTrack(track.id, files)} />
-        )}
       </div>
 
       <div>
-        {track.files.length > 0 && (
-          <UploadFile
-            selectedFiles={track.files}
-            onFileSelect={(files) => updateTrack(track.id, [...track.files, ...files])}
-            title=""
-            className="h-auto w-10 p-2 outline-0"
-          />
-        )}
-
         <button
           className="flex w-10 cursor-pointer items-center justify-center rounded-xl p-2 transition-all hover:bg-danger-400/20 active:scale-105"
           onClick={() => removeTrack(track.id)}

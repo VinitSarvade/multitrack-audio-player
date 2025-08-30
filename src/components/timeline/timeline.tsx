@@ -1,6 +1,6 @@
 'use client';
 
-import { RefObject, useImperativeHandle } from 'react';
+import { RefObject, useEffect, useImperativeHandle } from 'react';
 import { PlusIcon } from 'lucide-react';
 
 import { useTimelineAudio } from '@/hooks/useTimelineAudio';
@@ -15,6 +15,7 @@ export interface TimelineActions {
   play: () => void;
   pause: () => void;
   stop: () => void;
+  isPlaying: boolean;
 }
 
 interface TimelineProps {
@@ -22,9 +23,10 @@ interface TimelineProps {
   tracks: Array<{ id: string; name?: string }>;
   onAddTrack: () => void;
   onRemoveTrack: (trackId: string) => void;
+  onPlayingStateChange?: (isPlaying: boolean) => void;
 }
 
-export default function Timeline({ ref, tracks, onAddTrack, onRemoveTrack }: TimelineProps) {
+export default function Timeline({ ref, tracks, onAddTrack, onRemoveTrack, onPlayingStateChange }: TimelineProps) {
   const timeline = useTimelineAudio();
   const { scrollContainerRef, effectiveContainerWidth } = useTimelineLayout();
   const { contentWidth, displayDuration, timeToPixels, pixelsToTime, formatTime } = useTimelineCalculations(
@@ -41,7 +43,14 @@ export default function Timeline({ ref, tracks, onAddTrack, onRemoveTrack }: Tim
     play: timeline.play,
     pause: timeline.pause,
     stop: timeline.stop,
+    isPlaying: timeline.isPlaying,
   }));
+
+  useEffect(() => {
+    if (onPlayingStateChange) {
+      onPlayingStateChange(timeline.isPlaying);
+    }
+  }, [timeline.isPlaying, onPlayingStateChange]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-surface">
