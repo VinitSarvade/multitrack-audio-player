@@ -54,8 +54,8 @@ export default function UploadFile({
     <div
       {...bond}
       className={cn(
-        'w-full h-full rounded-xl outline-dashed outline-blue-400 outline-2 relative transition-colors hover:bg-blue-400/50',
-        { 'bg-gray-400/75': state.over },
+        'relative h-full w-full rounded-xl outline-2 outline-accent-400 transition-colors outline-dashed hover:bg-accent-400/50',
+        { 'bg-surface-3/75': state.over },
         className
       )}
     >
@@ -65,13 +65,13 @@ export default function UploadFile({
         data-testid="file-uploader-input"
         id={id}
         onChange={handleFileSelect}
-        className="opacity-0 invisible absolute w-0 h-0"
+        className="invisible absolute h-0 w-0 opacity-0"
         accept="audio/*"
         multiple={multiple}
       />
       <label
         htmlFor={id}
-        className="text-white grid place-content-center place-items-center w-full h-full hover:cursor-pointer gap-2"
+        className="grid h-full w-full place-content-center place-items-center gap-2 text-primary hover:cursor-pointer"
         data-testid="file-uploader-label"
       >
         <CloudUpload />

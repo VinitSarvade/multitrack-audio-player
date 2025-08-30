@@ -15,14 +15,13 @@ interface TrackProps {
 
 export default function Track({ track, removeTrack, updateTrack }: TrackProps) {
   return (
-    <li className="flex items-center justify-between gap-4 h-28 flex-nowrap bg-gray-800 rounded-2xl p-4">
-      <div className="flex items-center gap-0.5 w-full h-full">
-        {track.files.map((file, idx) => (
+    <li className="flex h-28 flex-nowrap items-center justify-between gap-4 rounded-2xl bg-surface-2 p-4">
+      <div className="flex h-full w-full items-center gap-0.5">
           <div
             key={file.name + idx}
             className="flex items-center bg-gray-700 rounded-2xl p-2 text-nowrap h-20 border border-gray-600"
           >
-            {file.name}
+              <span className="truncate">{file.name}</span>
           </div>
         ))}
 
@@ -37,12 +36,12 @@ export default function Track({ track, removeTrack, updateTrack }: TrackProps) {
             selectedFiles={track.files}
             onFileSelect={(files) => updateTrack(track.id, [...track.files, ...files])}
             title=""
-            className="w-10 h-auto p-2 outline-0"
+            className="h-auto w-10 p-2 outline-0"
           />
         )}
 
         <button
-          className="flex justify-center items-center p-2 cursor-pointer transition-all active:scale-105 hover:bg-blue-400/50 w-10 rounded-xl"
+          className="flex w-10 cursor-pointer items-center justify-center rounded-xl p-2 transition-all hover:bg-danger-400/20 active:scale-105"
           onClick={() => removeTrack(track.id)}
         >
           <TrashIcon size={20} />

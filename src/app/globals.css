@@ -1,15 +1,38 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Typography */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* App surfaces */
+  --color-app: #0b0b0b;            /* main app background */
+  --color-surface: #111827;        /* panels / large surfaces */
+  --color-surface-2: #1f2937;      /* headers / nested surfaces */
+  --color-surface-3: #374151;      /* item backgrounds */
+
+  /* Borders and dividers */
+  --color-border: #374151;         /* default border */
+  --color-border-muted: #4b5563;   /* dashed/secondary borders */
+  --color-divider: var(--color-border-muted);
+
+  /* Text */
+  --color-primary: #ffffff;           /* primary text */
+  --color-secondary: #9ca3af;         /* secondary text */
+  --color-tertiary: #6b7280;          /* tertiary text */
+
+  /* Accents and states */
+  --color-accent: #2563eb;         /* primary action */
+  --color-accent-500: #3b82f6;     /* hover/active */
+  --color-accent-400: #60a5fa;     /* outlines/borders */
+  --color-success: #22c55e;        /* success */
+  --color-success-600: #16a34a;
+  --color-warning: #ca8a04;        /* warning */
+  --color-warning-500: #eab308;
+  --color-danger: #dc2626;         /* danger */
+  --color-danger-500: #ef4444;
+  --color-danger-400: #f87171;
+
 }
 
 @media (prefers-color-scheme: dark) {
@@ -17,10 +40,46 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+
+  /* Utilities */
+  --color-outline: #60a5fa;        /* outlines */
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-app);
+  color: var(--color-primary);
   font-family: var(--font-geist-mono);
 }
+
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-gradient {
+  from { --gradient-angle: 0deg }
+  to { --gradient-angle: 360deg }
+}
+
+.audio-player {
+  background-color: var(--color-surface);
+  border-radius: 5rem;
+  position: relative;
+}
+
+.audio-player::before {
+  content: "";
+  position: absolute;
+  inset: -0.5rem;
+  z-index: -1;
+  border-radius: 5rem;
+  filter: blur(0.75rem);
+  background: conic-gradient(from var(--gradient-angle), #e74c3c, #f39c12, #00a65a, #0073b7, #00c0ef,#e74c3c);
+  animation: rotate-gradient 5s linear infinite;
+  animation-play-state: paused;
+}
+.audio-player.playing::before {
+  animation-play-state: running;
+}
+  

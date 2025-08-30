@@ -30,7 +30,7 @@ export default function RootLayout({
       <body
         className={cn(
           `${geistSans.variable} ${geistMono.variable}`,
-          'antialiased min-h-screen grid place-content-center'
+          'grid min-h-screen place-content-center antialiased'
         )}
       >
         {children}

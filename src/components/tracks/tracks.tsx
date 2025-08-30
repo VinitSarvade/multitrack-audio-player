@@ -43,7 +43,7 @@ export default function Tracks({ ref }: { ref: RefObject<TracksActions | null> }
   };
 
   return (
-    <div className="bg-black rounded-2xl h-full overflow-y-auto p-4">
+    <div className="h-full overflow-y-auto rounded-2xl bg-surface p-4">
       <ul className="flex flex-col gap-4">
         {tracks.map((track) => (
           <Track key={track.id} track={track} removeTrack={removeTrack} updateTrack={updateTrack} />
@@ -51,7 +51,7 @@ export default function Tracks({ ref }: { ref: RefObject<TracksActions | null> }
       </ul>
 
       <button
-        className="mt-4 flex items-center gap-2 border border-blue-400 rounded-xl px-4 py-2 hover:bg-blue-400/20 cursor-pointer transition-all active:scale-105"
+        className="mt-4 flex cursor-pointer items-center gap-2 rounded-xl border border-accent-400 px-4 py-2 transition-all hover:bg-accent-400/20 active:scale-105"
         onClick={addTrack}
       >
         <PlusIcon size={16} /> Add Track

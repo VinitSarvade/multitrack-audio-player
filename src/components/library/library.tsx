@@ -12,11 +12,11 @@ export default function Library({ files, onFileSelect }: FilesProps) {
   }
 
   return (
-    <div className="outline outline-blue-400 rounded-xl p-4">
+    <div className="rounded-xl p-4 outline outline-accent-400">
       <h3 className="mb-2 text-lg font-semibold">Library</h3>
-      <ul className="divide-y divide-gray-400">
+      <ul className="divide-y divide-divider">
         {files.map((file) => (
-          <li className="py-2 flex justify-between items-center group" key={file.name}>
+          <li className="group flex items-center justify-between py-2" key={file.name}>
             {file.name}
 
             <div className="flex gap-2">

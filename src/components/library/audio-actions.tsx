@@ -7,7 +7,7 @@ interface AudioActionsProps {
 }
 
 const getAudioButton = (clickHandler: () => void, icon: React.ReactNode) => (
-  <button onClick={clickHandler} className="transition-transform active:scale-110 cursor-pointer">
+  <button onClick={clickHandler} className="cursor-pointer transition-transform active:scale-110">
     {icon}
   </button>
 );
