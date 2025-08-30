@@ -9,7 +9,7 @@ interface PlaybackControlsProps {
 
 export default function PlaybackControls({ isPlaying, onPlay, onPause, onStop }: PlaybackControlsProps) {
   return (
-    <div className="flex items-center justify-center gap-4">
+    <div className="flex items-center justify-center gap-4 p-10">
       {!isPlaying ? (
         <button
           onClick={onPlay}
