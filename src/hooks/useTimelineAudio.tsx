@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { hasOverlap } from '@/lib/utils/overlap-detector';
+
 export interface AudioSegment {
   id: string;
   file: File;
@@ -53,7 +55,7 @@ export function useTimelineAudio() {
   const addSegment = useCallback(
     async (trackId: string, file: File, startTime: number = 0): Promise<string> => {
       const audioContext = initializeAudioContext();
-      const segmentId = `${trackId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const segmentId = `${trackId}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
       try {
         const arrayBuffer = await file.arrayBuffer();
@@ -72,16 +74,7 @@ export function useTimelineAudio() {
         };
 
         // Check for overlaps in the same track
-        const hasOverlap = Array.from(state.segments.values()).some(
-          (existingSegment) =>
-            existingSegment.trackId === trackId &&
-            existingSegment.id !== segmentId &&
-            ((startTime >= existingSegment.startTime && startTime < existingSegment.endTime) ||
-              (segment.endTime > existingSegment.startTime && segment.endTime <= existingSegment.endTime) ||
-              (startTime <= existingSegment.startTime && segment.endTime >= existingSegment.endTime))
-        );
-
-        if (hasOverlap) {
+        if (hasOverlap(state.segments, trackId, startTime, segment.endTime, segmentId)) {
           throw new Error('Segment overlaps with existing segment in the same track');
         }
 
@@ -130,16 +123,7 @@ export function useTimelineAudio() {
       console.log(`Moving segment ${segmentId} (${segment.file.name}) from ${segment.startTime}s to ${newStartTime}s`);
 
       // Check for overlaps in the same track (excluding self)
-      const hasOverlap = Array.from(state.segments.values()).some(
-        (existingSegment) =>
-          existingSegment.trackId === segment.trackId &&
-          existingSegment.id !== segmentId &&
-          ((newStartTime >= existingSegment.startTime && newStartTime < existingSegment.endTime) ||
-            (newEndTime > existingSegment.startTime && newEndTime <= existingSegment.endTime) ||
-            (newStartTime <= existingSegment.startTime && newEndTime >= existingSegment.endTime))
-      );
-
-      if (hasOverlap) {
+      if (hasOverlap(state.segments, segment.trackId, newStartTime, newEndTime, segmentId)) {
         console.log(`Cannot move segment ${segmentId} to ${newStartTime}s - would overlap`);
         return false; // Cannot move to this position
       }

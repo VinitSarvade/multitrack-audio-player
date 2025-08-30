@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 
+import { cn } from '@/lib/utils/cn';
+
 import PlaybackControls from './playback-controls';
 import Timeline, { TimelineActions } from './timeline/timeline';
 
@@ -32,7 +34,7 @@ export default function Player() {
   };
 
   return (
-    <div className="grid h-[40rem] w-[80rem] max-w-[calc(100vw-8rem)] grid-rows-[auto_1fr] gap-8 p-8 outline-2 outline-accent-400">
+    <div className={cn('audio-player', { playing: isPlaying })}>
       <PlaybackControls isPlaying={isPlaying} onPlay={handlePlay} onPause={handlePause} onStop={handleStop} />
 
       <div className="flex flex-1 flex-col overflow-y-auto border-t-2 border-accent-400 pt-8">

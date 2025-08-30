@@ -62,22 +62,33 @@ body {
 
 .audio-player {
   background-color: var(--color-surface);
-  border-radius: 5rem;
+  border-radius: 2rem;
   position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 2rem;
+  padding: 2rem;
+  outline: 1px solid var(--color-accent-400);
+  width: 80rem;
+  height: 50rem;
 }
 
 .audio-player::before {
   content: "";
   position: absolute;
-  inset: -0.5rem;
+  inset: 0;
   z-index: -1;
-  border-radius: 5rem;
-  filter: blur(0.75rem);
+  border-radius: inherit;
+  filter: blur(-0.1rem);
   background: conic-gradient(from var(--gradient-angle), #e74c3c, #f39c12, #00a65a, #0073b7, #00c0ef,#e74c3c);
   animation: rotate-gradient 5s linear infinite;
   animation-play-state: paused;
+
+  transition: all 0.2s ease-in;
 }
 .audio-player.playing::before {
   animation-play-state: running;
+  filter: blur(0.75rem);
+  inset: -0.75rem;
 }
   
