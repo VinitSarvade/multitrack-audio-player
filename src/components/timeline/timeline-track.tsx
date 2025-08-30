@@ -23,19 +23,15 @@ interface TimelineTrackProps {
 }
 
 export default function TimelineTrack({
-  trackName,
+  trackId,
   segments,
   currentTime,
-  pixelsPerSecond,
   timeToPixels,
   pixelsToTime,
-  onFileUpload,
-  onRemoveTrack,
   onMoveSegment,
   onRemoveSegment,
   isPlaying,
   contentWidth,
-  renderHeader = true,
 }: TimelineTrackProps) {
   const trackHeight = 80;
   const totalWidth = contentWidth;
@@ -57,6 +53,7 @@ export default function TimelineTrack({
             onMove={onMoveSegment}
             onRemove={onRemoveSegment}
             trackHeight={trackHeight}
+            isPlaying={isPlaying}
           />
         ))}
       </div>

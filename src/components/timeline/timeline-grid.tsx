@@ -100,7 +100,7 @@ export default function TimelineGrid({
                     {isPlaying && hasActiveSegment && <div className="h-2 w-2 animate-pulse rounded-full bg-success" />}
                   </div>
 
-                  <div className="flex flex-shrink-0 items-center gap-1">
+                  <div className="flex flex-shrink-0 items-center gap-2">
                     <UploadFile
                       selectedFiles={[]}
                       onFileSelect={(files) => onFileUpload(track.id, files)}
@@ -108,11 +108,23 @@ export default function TimelineGrid({
                       className="rounded bg-accent px-2 py-1 text-xs hover:bg-accent-500"
                     />
                     <button
-                      onClick={() => onRemoveTrack(track.id)}
-                      className="p-1 text-secondary transition-colors hover:text-danger-400"
+                      onClick={() => !isPlaying && tracks.length > 1 && onRemoveTrack(track.id)}
+                      disabled={isPlaying || tracks.length <= 1}
+                      className={`p-1 transition-colors ${
+                        isPlaying || tracks.length <= 1
+                          ? 'cursor-not-allowed text-secondary/50'
+                          : 'text-secondary hover:text-danger-400'
+                      }`}
                       aria-label={`Remove ${track.name || `Track ${track.id}`}`}
+                      title={
+                        isPlaying
+                          ? 'Cannot delete track while audio is playing'
+                          : tracks.length <= 1
+                            ? 'Cannot delete the only remaining track'
+                            : ''
+                      }
                     >
-                      <TrashIcon size={12} />
+                      <TrashIcon size={16} />
                     </button>
                   </div>
                 </div>

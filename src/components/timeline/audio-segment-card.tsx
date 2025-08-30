@@ -16,14 +16,15 @@ interface AudioSegmentCardProps {
   onRemove: (segmentId: string) => void;
   isActive?: boolean;
   trackHeight: number;
+  isPlaying?: boolean;
 }
 
 export default function AudioSegmentCard({
   segment,
   timeToPixels,
   onRemove,
-
   trackHeight,
+  isPlaying = false,
 }: AudioSegmentCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -71,10 +72,16 @@ export default function AudioSegmentCard({
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
-            onRemove(segment.id);
+            if (!isPlaying) {
+              onRemove(segment.id);
+            }
           }}
-          className="absolute top-1 right-1 z-20 hidden rounded bg-danger p-1 text-primary transition-colors group-hover:block hover:bg-danger-500"
+          disabled={isPlaying}
+          className={`absolute top-1 right-1 z-20 hidden rounded p-1 transition-colors group-hover:block ${
+            isPlaying ? 'cursor-not-allowed bg-danger/50 text-primary/50' : 'bg-danger text-primary hover:bg-danger-500'
+          }`}
           aria-label="Delete segment"
+          title={isPlaying ? 'Cannot delete segment while audio is playing' : ''}
         >
           <TrashIcon size={12} />
         </button>
