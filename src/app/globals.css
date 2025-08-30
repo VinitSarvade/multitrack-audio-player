@@ -33,13 +33,11 @@
   --color-danger-500: #ef4444;
   --color-danger-400: #f87171;
 
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Timeline specific */
+  --color-playhead: #ef4444;       /* playhead color */
+  --color-ruler-mark: #9ca3af;     /* ruler tick + label */
+  --color-segment: #1e3a8a;        /* segment base */
+  --color-segment-800: #1e40af;    /* segment hover */
 
   /* Utilities */
   --color-outline: #60a5fa;        /* outlines */

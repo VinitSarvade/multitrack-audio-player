@@ -3,6 +3,7 @@
 import { RefObject, useImperativeHandle, useState } from 'react';
 import { PlusIcon } from 'lucide-react';
 
+import { useMultiTrackAudio } from '../../hooks/useMultiTrackAudio';
 import Track, { TrackItem } from './track';
 
 export interface TracksActions {
@@ -14,19 +15,20 @@ export interface TracksActions {
 
 export default function Tracks({ ref }: { ref: RefObject<TracksActions | null> }) {
   const [tracks, setTracks] = useState<TrackItem[]>([{ id: '1', files: [] }]);
+  const multiTrackAudio = useMultiTrackAudio();
 
   useImperativeHandle(ref, () => ({
     play: () => {
-      console.log('play');
+      multiTrackAudio.play();
     },
     pause: () => {
-      console.log('pause');
+      multiTrackAudio.pause();
     },
     stop: () => {
-      console.log('stop');
+      multiTrackAudio.stop();
     },
     resume: () => {
-      console.log('resume');
+      multiTrackAudio.resume();
     },
   }));
 
@@ -35,10 +37,35 @@ export default function Tracks({ ref }: { ref: RefObject<TracksActions | null> }
   };
 
   const removeTrack = (id: string) => {
+    // Remove from audio system first
+    tracks
+      .find((t) => t.id === id)
+      ?.files.forEach((file, idx) => {
+        multiTrackAudio.removeTrack(`${id}-${idx}`);
+      });
+
+    // Remove from UI
     setTracks(tracks.filter((track) => track.id !== id));
   };
 
-  const updateTrack = (id: string, files: File[]) => {
+  const updateTrack = async (id: string, files: File[]) => {
+    const oldTrack = tracks.find((t) => t.id === id);
+
+    // Remove old files from audio system
+    if (oldTrack) {
+      oldTrack.files.forEach((file, idx) => {
+        multiTrackAudio.removeTrack(`${id}-${idx}`);
+      });
+    }
+
+    // Load new files into audio system
+    await Promise.all(
+      files.map(async (file, idx) => {
+        await multiTrackAudio.loadTrack(`${id}-${idx}`, file);
+      })
+    );
+
+    // Update UI state
     setTracks(tracks.map((t) => (t.id === id ? { ...t, files } : t)));
   };
 
@@ -46,7 +73,13 @@ export default function Tracks({ ref }: { ref: RefObject<TracksActions | null> }
     <div className="h-full overflow-y-auto rounded-2xl bg-surface p-4">
       <ul className="flex flex-col gap-4">
         {tracks.map((track) => (
-          <Track key={track.id} track={track} removeTrack={removeTrack} updateTrack={updateTrack} />
+          <Track
+            key={track.id}
+            track={track}
+            removeTrack={removeTrack}
+            updateTrack={updateTrack}
+            audioState={multiTrackAudio}
+          />
         ))}
       </ul>
 

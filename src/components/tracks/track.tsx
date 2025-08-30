@@ -1,4 +1,4 @@
-import { PlusIcon, TrashIcon } from 'lucide-react';
+import { TrashIcon } from 'lucide-react';
 
 import UploadFile from '../upload-file';
 
@@ -11,19 +11,29 @@ interface TrackProps {
   track: TrackItem;
   removeTrack: (id: string) => void;
   updateTrack: (id: string, files: File[]) => void;
+  audioState: ReturnType<typeof import('../../hooks/useMultiTrackAudio').useMultiTrackAudio>;
 }
 
-export default function Track({ track, removeTrack, updateTrack }: TrackProps) {
+export default function Track({ track, removeTrack, updateTrack, audioState }: TrackProps) {
   return (
     <li className="flex h-28 flex-nowrap items-center justify-between gap-4 rounded-2xl bg-surface-2 p-4">
       <div className="flex h-full w-full items-center gap-0.5">
-          <div
-            key={file.name + idx}
-            className="flex items-center bg-gray-700 rounded-2xl p-2 text-nowrap h-20 border border-gray-600"
-          >
+        {track.files.map((file, idx) => {
+          const trackAudioId = `${track.id}-${idx}`;
+          const audioTrack = audioState.tracks.get(trackAudioId);
+          const isLoaded = audioTrack?.isLoaded || false;
+
+          return (
+            <div
+              key={file.name + idx}
+              className={`flex h-20 items-center justify-between rounded-2xl border bg-surface-3 p-2 text-nowrap ${
+                isLoaded ? 'border-success' : 'border-border'
+              } min-w-48`}
+            >
               <span className="truncate">{file.name}</span>
-          </div>
-        ))}
+            </div>
+          );
+        })}
 
         {track.files.length === 0 && (
           <UploadFile selectedFiles={track.files} onFileSelect={(files) => updateTrack(track.id, files)} />
