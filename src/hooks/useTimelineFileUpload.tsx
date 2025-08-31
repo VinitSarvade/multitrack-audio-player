@@ -4,31 +4,48 @@ import { AudioSegment } from './useTimelineAudio';
 
 interface UseTimelineFileUploadProps {
   segments: Map<string, AudioSegment>;
-  currentTime: number;
-  addSegment: (trackId: string, file: File, startTime: number) => Promise<string>;
+  addSegment: (trackId: string, file: File, startTime?: number) => Promise<string>;
 }
 
-export function useTimelineFileUpload({ segments, currentTime, addSegment }: UseTimelineFileUploadProps) {
+export function useTimelineFileUpload({ segments, addSegment }: UseTimelineFileUploadProps) {
   const handleFileUpload = useCallback(
     async (trackId: string, files: File[]) => {
+      const trackSegments = Array.from(segments.values()).filter((segment) => segment.trackId === trackId);
+      let nextStartTime = trackSegments.length > 0 ? Math.max(...trackSegments.map((s) => s.endTime)) : 0;
+
+      const fileData: Array<{ file: File; duration: number; startTime: number }> = [];
+
       for (const file of files) {
         try {
-          const trackSegments = Array.from(segments.values()).filter((segment) => segment.trackId === trackId);
+          const arrayBuffer = await file.arrayBuffer();
+          const AudioContextClass =
+            window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+          const audioContext = new AudioContextClass();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-          const lastEndTime = trackSegments.length > 0 ? Math.max(...trackSegments.map((s) => s.endTime)) : currentTime;
+          fileData.push({
+            file,
+            duration: audioBuffer.duration,
+            startTime: nextStartTime,
+          });
 
-          await addSegment(trackId, file, lastEndTime);
+          nextStartTime += audioBuffer.duration;
+          audioContext.close();
+        } catch (error) {
+          console.error('Error decoding file:', error);
+        }
+      }
+
+      for (const { file, startTime } of fileData) {
+        try {
+          await addSegment(trackId, file, startTime);
         } catch (error) {
           console.error('Error adding segment:', error);
-          try {
-            await addSegment(trackId, file, currentTime + 0.1);
-          } catch (e) {
-            console.error('Could not add segment:', e);
-          }
         }
       }
     },
-    [segments, currentTime, addSegment]
+    [segments, addSegment]
   );
 
   return {

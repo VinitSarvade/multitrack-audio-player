@@ -35,7 +35,6 @@ export default function Timeline({ ref, tracks, onAddTrack, onRemoveTrack, onPla
   );
   const { handleFileUpload } = useTimelineFileUpload({
     segments: timeline.segments,
-    currentTime: timeline.currentTime,
     addSegment: timeline.addSegment,
   });
 
