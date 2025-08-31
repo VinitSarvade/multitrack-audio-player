@@ -9,7 +9,7 @@ import TimelineRuler from './timeline-ruler';
 import TimelineTrack from './timeline-track';
 
 interface TimelineGridProps {
-  tracks: Array<{ id: string; name?: string }>;
+  tracks: Array<{ id: string }>;
   segments: Map<string, AudioSegment>;
   currentTime: number;
   isPlaying: boolean;
@@ -83,11 +83,12 @@ export default function TimelineGrid({
         <div className="grid grid-cols-[12rem_repeat(3,minmax(0,1fr))]">
           <div className="col-span-1 bg-surface">
             <div className="h-12 border-b border-border bg-surface-2" />
-            {tracks.map((track) => {
+            {tracks.map((track, index) => {
               const trackSegments = Array.from(segments.values()).filter((s) => s.trackId === track.id);
               const hasActiveSegment = trackSegments.some(
                 (segment) => currentTime >= segment.startTime && currentTime < segment.endTime
               );
+              const trackName = `Track ${index + 1}`;
 
               return (
                 <div
@@ -96,7 +97,7 @@ export default function TimelineGrid({
                   style={{ height: 80 }}
                 >
                   <div className="flex min-w-0 items-center gap-2">
-                    <h3 className="truncate text-sm font-medium text-primary">{track.name || `Track ${track.id}`}</h3>
+                    <h3 className="truncate text-sm font-medium text-primary">{trackName}</h3>
                     {isPlaying && hasActiveSegment && <div className="h-2 w-2 animate-pulse rounded-full bg-success" />}
                   </div>
 
@@ -115,7 +116,7 @@ export default function TimelineGrid({
                           ? 'cursor-not-allowed text-secondary/50'
                           : 'text-secondary hover:text-danger-400'
                       }`}
-                      aria-label={`Remove ${track.name || `Track ${track.id}`}`}
+                      aria-label={`Remove ${trackName}`}
                       title={
                         isPlaying
                           ? 'Cannot delete track while audio is playing'
@@ -144,11 +145,11 @@ export default function TimelineGrid({
               />
 
               <DndContext onDragEnd={handleDragEnd}>
-                {tracks.map((track) => (
+                {tracks.map((track, index) => (
                   <TimelineTrack
                     key={track.id}
                     trackId={track.id}
-                    trackName={track.name || `Track ${track.id}`}
+                    trackName={`Track ${index + 1}`}
                     segments={Array.from(segments.values()).filter((segment) => segment.trackId === track.id)}
                     currentTime={currentTime}
                     pixelsPerSecond={PIXELS_PER_SECOND}

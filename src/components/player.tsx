@@ -7,14 +7,16 @@ import { cn } from '@/lib/utils/cn';
 import PlaybackControls from './playback-controls';
 import Timeline, { TimelineActions } from './timeline/timeline';
 
+const generateId = () => `track_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
 export default function Player() {
   const timelineRef = useRef<TimelineActions>(null);
-  const [tracks, setTracks] = useState([{ id: '1', name: 'Track 1' }]);
+  const [tracks, setTracks] = useState([{ id: generateId() }]);
   const [isPlaying, setIsPlaying] = useState(false);
 
   const addTrack = () => {
-    const newId = (tracks.length + 1).toString();
-    setTracks([...tracks, { id: newId, name: `Track ${newId}` }]);
+    const newId = generateId();
+    setTracks([...tracks, { id: newId }]);
   };
 
   const removeTrack = (trackId: string) => {

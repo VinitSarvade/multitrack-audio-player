@@ -23,7 +23,6 @@ interface TimelineTrackProps {
 }
 
 export default function TimelineTrack({
-  trackId,
   segments,
   currentTime,
   timeToPixels,

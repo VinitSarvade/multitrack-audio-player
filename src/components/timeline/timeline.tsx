@@ -20,7 +20,7 @@ export interface TimelineActions {
 
 interface TimelineProps {
   ref: RefObject<TimelineActions | null>;
-  tracks: Array<{ id: string; name?: string }>;
+  tracks: Array<{ id: string }>;
   onAddTrack: () => void;
   onRemoveTrack: (trackId: string) => void;
   onPlayingStateChange?: (isPlaying: boolean) => void;
