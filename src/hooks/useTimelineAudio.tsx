@@ -78,10 +78,6 @@ export function useTimelineAudio() {
           throw new Error('Segment overlaps with existing segment in the same track');
         }
 
-        console.log(
-          `Added segment ${segmentId} (${file.name}) to track ${trackId}: ${startTime}s - ${segment.endTime}s`
-        );
-
         setState((prev) => {
           const newSegments = new Map(prev.segments);
           newSegments.set(segmentId, segment);
@@ -91,8 +87,6 @@ export function useTimelineAudio() {
           newSegments.forEach((seg) => {
             maxEndTime = Math.max(maxEndTime, seg.endTime);
           });
-
-          console.log(`Timeline duration updated to ${Math.max(prev.duration, maxEndTime)}s`);
 
           return {
             ...prev,
@@ -120,12 +114,10 @@ export function useTimelineAudio() {
       }
 
       const newEndTime = newStartTime + segment.duration;
-      console.log(`Moving segment ${segmentId} (${segment.file.name}) from ${segment.startTime}s to ${newStartTime}s`);
 
       // Check for overlaps in the same track (excluding self)
       if (hasOverlap(state.segments, segment.trackId, newStartTime, newEndTime, segmentId)) {
-        console.log(`Cannot move segment ${segmentId} to ${newStartTime}s - would overlap`);
-        return false; // Cannot move to this position
+        return false;
       }
 
       setState((prev) => {
@@ -161,7 +153,6 @@ export function useTimelineAudio() {
         }, 0);
       }
 
-      console.log(`Successfully moved segment ${segmentId} to ${newStartTime}s - ${newEndTime}s`);
       return true;
     },
     [state.segments, state.isPlaying]
@@ -177,14 +168,10 @@ export function useTimelineAudio() {
       }
 
       const newEndTime = newStartTime + segment.duration;
-      console.log(
-        `Moving segment ${segmentId} (${segment.file.name}) from track ${segment.trackId} to track ${newTrackId} at ${newStartTime}s`
-      );
 
       // Check for overlaps in the destination track (excluding self)
       if (hasOverlap(state.segments, newTrackId, newStartTime, newEndTime, segmentId)) {
-        console.log(`Cannot move segment ${segmentId} to track ${newTrackId} at ${newStartTime}s - would overlap`);
-        return false; // Cannot move to this position
+        return false;
       }
 
       setState((prev) => {
@@ -221,9 +208,6 @@ export function useTimelineAudio() {
         }, 0);
       }
 
-      console.log(
-        `Successfully moved segment ${segmentId} to track ${newTrackId} at ${newStartTime}s - ${newEndTime}s`
-      );
       return true;
     },
     [state.segments, state.isPlaying]
@@ -268,24 +252,10 @@ export function useTimelineAudio() {
   const getActiveSegments = useCallback(
     (timePosition: number): AudioSegment[] => {
       const allSegments = Array.from(state.segments.values());
-      console.log(
-        `All segments:`,
-        allSegments.map((s) => ({
-          id: s.id,
-          file: s.file.name,
-          startTime: s.startTime,
-          endTime: s.endTime,
-          isLoaded: s.isLoaded,
-        }))
-      );
 
       const activeSegments = allSegments.filter((segment) => {
         const isInTimeRange = timePosition >= segment.startTime && timePosition < segment.endTime;
         const shouldPlay = segment.isLoaded && isInTimeRange;
-
-        console.log(
-          `Segment ${segment.file.name}: time=${timePosition}, start=${segment.startTime}, end=${segment.endTime}, inRange=${isInTimeRange}, shouldPlay=${shouldPlay}`
-        );
 
         return shouldPlay;
       });
@@ -326,96 +296,94 @@ export function useTimelineAudio() {
   }, []);
 
   // Start timeline playback
-  const play = useCallback(() => {
-    const audioContext = initializeAudioContext();
-    if (state.segments.size === 0) return;
+  const play = useCallback(
+    (startTime?: number) => {
+      const audioContext = initializeAudioContext();
+      if (state.segments.size === 0) return;
 
-    console.log(`Play called with currentTime: ${state.currentTime}s`);
+      const playbackTime = startTime !== undefined ? startTime : state.currentTime;
 
-    // Ensure AudioContext is running (required by browsers before audio time advances)
-    if (audioContext.state === 'suspended') {
-      audioContext.resume().catch(() => {});
-    }
-
-    const now = audioContext.currentTime;
-    playbackStartTimeRef.current = now;
-    playbackStartPositionRef.current = state.currentTime;
-
-    // Sync refs immediately so first RAF uses correct values
-    playbackRateRef.current = state.playbackRate;
-    durationRef.current = state.duration;
-    isPlayingRef.current = true;
-
-    // If an animation loop is already running, cancel it before starting a new one
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-
-    // Stop all existing sources
-    state.segments.forEach((segment) => {
-      if (segment.source) {
-        try {
-          segment.source.stop();
-        } catch {
-          // Ignore if already stopped
-        }
+      // Ensure AudioContext is running (required by browsers before audio time advances)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().catch(() => {});
       }
-    });
 
-    const newSegments = new Map(state.segments);
+      const now = audioContext.currentTime;
+      playbackStartTimeRef.current = now;
+      playbackStartPositionRef.current = playbackTime;
 
-    // Schedule all segments up front, including those starting in the future
-    newSegments.forEach((segment, id) => {
-      if (segment.buffer && segment.isLoaded) {
-        const source = audioContext.createBufferSource();
-        source.buffer = segment.buffer;
-        source.connect(masterGainRef.current!);
-        // align playback rate with timeline
-        try {
-          source.playbackRate.value = state.playbackRate;
-        } catch {}
+      playbackRateRef.current = state.playbackRate;
+      durationRef.current = state.duration;
+      isPlayingRef.current = true;
 
-        // Calculate offset and remaining duration relative to current playhead
-        const segmentOffset = Math.max(0, state.currentTime - segment.startTime);
-        const remainingDuration = segment.duration - segmentOffset;
-
-        // If the segment has already completed, skip scheduling
-        if (remainingDuration <= 0) {
-          newSegments.set(id, { ...segment, source: null });
-          return;
-        }
-
-        // Start immediately if within segment, otherwise at a future context time
-        const when =
-          segment.startTime <= state.currentTime
-            ? now
-            : now + (segment.startTime - state.currentTime) / Math.max(0.0001, state.playbackRate);
-
-        try {
-          source.start(when, segmentOffset, remainingDuration);
-          console.log(
-            `Scheduled segment ${segment.id} (${segment.file.name}) at t=${when}s (ctx), offset=${segmentOffset}s, duration=${remainingDuration}s`
-          );
-          newSegments.set(id, { ...segment, source });
-        } catch (error) {
-          console.error(`Failed to schedule segment ${segment.id}:`, error);
-          newSegments.set(id, { ...segment, source: null });
-        }
+      // If an animation loop is already running, cancel it before starting a new one
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
-    });
 
-    setState((prev) => ({
-      ...prev,
-      segments: newSegments,
-      isPlaying: true,
-    }));
+      // Stop all existing sources
+      state.segments.forEach((segment) => {
+        if (segment.source) {
+          try {
+            segment.source.stop();
+          } catch {} // Ignore if already stopped
+        }
+      });
 
-    // Mark playing true in ref (already set above; keep for clarity)
-    isPlayingRef.current = true;
+      const newSegments = new Map(state.segments);
 
-    // Start animation loop
-    animationFrameRef.current = requestAnimationFrame(updateCurrentTime);
-  }, [state, initializeAudioContext, updateCurrentTime]);
+      // Schedule all segments up front, including those starting in the future
+      newSegments.forEach((segment, id) => {
+        if (segment.buffer && segment.isLoaded) {
+          const source = audioContext.createBufferSource();
+          source.buffer = segment.buffer;
+          source.connect(masterGainRef.current!);
+
+          try {
+            source.playbackRate.value = state.playbackRate;
+          } catch {}
+
+          // Calculate offset and remaining duration relative to current playhead
+          const segmentOffset = Math.max(0, playbackTime - segment.startTime);
+          const remainingDuration = segment.duration - segmentOffset;
+
+          // If the segment has already completed, skip scheduling
+          if (remainingDuration <= 0) {
+            newSegments.set(id, { ...segment, source: null });
+            return;
+          }
+
+          // Start immediately if within segment, otherwise at a future context time
+          const when =
+            segment.startTime <= playbackTime
+              ? now
+              : now + (segment.startTime - playbackTime) / Math.max(0.0001, state.playbackRate);
+
+          try {
+            source.start(when, segmentOffset, remainingDuration);
+            newSegments.set(id, { ...segment, source });
+          } catch (error) {
+            console.error(`Failed to schedule segment ${segment.id}:`, error);
+            newSegments.set(id, { ...segment, source: null });
+          }
+        }
+      });
+
+      setState((prev) => ({
+        ...prev,
+        segments: newSegments,
+        isPlaying: true,
+        currentTime: playbackTime, // Update current time if specified
+      }));
+
+      // Mark playing true in ref (already set above; keep for clarity)
+      isPlayingRef.current = true;
+
+      // Start animation loop
+      animationFrameRef.current = requestAnimationFrame(updateCurrentTime);
+    },
+    [state, initializeAudioContext, updateCurrentTime]
+  );
 
   // keep a ref to the latest play function for safe rescheduling from other callbacks
   playRef.current = play;
@@ -463,15 +431,13 @@ export function useTimelineAudio() {
   const seekTo = useCallback(
     (time: number) => {
       const clampedTime = Math.max(0, Math.min(time, state.duration));
-      console.log(`Seeking to time: ${clampedTime}s`);
+      const wasPlaying = state.isPlaying;
 
-      // Stop current playback first if playing
       if (state.isPlaying) {
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
         }
 
-        // Stop all current sources
         state.segments.forEach((segment) => {
           if (segment.source) {
             try {
@@ -483,17 +449,17 @@ export function useTimelineAudio() {
         });
       }
 
-      // Update the current time and stop playback
       setState((prev) => ({ ...prev, currentTime: clampedTime, isPlaying: false }));
-      console.log(`Set currentTime to ${clampedTime}s and stopped playback`);
+
+      if (wasPlaying) {
+        setTimeout(() => {
+          play(clampedTime);
+        }, 1); // Small delay to ensure cleanup is complete
+      }
     },
-    [state.duration, state.isPlaying, state.segments]
+    [state.duration, state.isPlaying, state.segments, play]
   );
 
-  // Set segment volume
-  // Per-segment volume/mute removed.
-
-  // Cleanup
   const cleanup = useCallback(() => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);

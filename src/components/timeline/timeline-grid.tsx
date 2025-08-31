@@ -58,7 +58,6 @@ export default function TimelineGrid({
 
     const newStartTime = Math.max(0, segment.startTime + deltaX / PIXELS_PER_SECOND);
 
-    // Check if there's significant vertical movement (cross-track drop)
     const trackMovement = Math.round(deltaY / TRACK_HEIGHT);
 
     if (Math.abs(trackMovement) >= 1) {
@@ -68,7 +67,6 @@ export default function TimelineGrid({
       // Validate new track index
       if (newTrackIndex >= 0 && newTrackIndex < tracks.length) {
         const newTrackId = tracks[newTrackIndex].id;
-        console.log(`Moving segment ${segmentId} from track ${segment.trackId} to track ${newTrackId}`);
         onMoveSegmentToTrack(segmentId, newTrackId, newStartTime);
         return;
       }
