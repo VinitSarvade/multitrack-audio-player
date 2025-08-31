@@ -57,7 +57,9 @@ export default function AudioSegmentCard({
       }}
       className={cn(
         'group absolute top-1 cursor-move rounded-lg border-2 border-accent-400 bg-segment/50 shadow-md transition-all select-none hover:bg-segment-800/50',
-        { 'scale-105 shadow-lg': isDragging }
+        {
+          'border-success-400 scale-y-110 animate-pulse bg-success/20 shadow-xl': isDragging,
+        }
       )}
       style={{
         left: left,
