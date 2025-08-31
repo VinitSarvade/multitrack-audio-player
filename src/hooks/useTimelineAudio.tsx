@@ -248,6 +248,45 @@ export function useTimelineAudio() {
     [state.segments]
   );
 
+  // Remove all segments belonging to a track
+  const removeTrackSegments = useCallback(
+    (trackId: string) => {
+      console.log(`Removing all segments for track ${trackId}`);
+
+      const trackSegments = Array.from(state.segments.values()).filter((segment) => segment.trackId === trackId);
+
+      trackSegments.forEach((segment) => {
+        if (segment.source) {
+          try {
+            segment.source.stop();
+          } catch {} // Ignore if already stopped
+        }
+      });
+
+      setState((prev) => {
+        const newSegments = new Map(prev.segments);
+
+        Array.from(newSegments.entries()).forEach(([segmentId, segment]) => {
+          if (segment.trackId === trackId) {
+            newSegments.delete(segmentId);
+          }
+        });
+
+        let maxEndTime = 0;
+        newSegments.forEach((seg) => {
+          maxEndTime = Math.max(maxEndTime, seg.endTime);
+        });
+
+        return {
+          ...prev,
+          segments: newSegments,
+          duration: maxEndTime,
+        };
+      });
+    },
+    [state.segments]
+  );
+
   // Get segments that should be playing at given time
   const getActiveSegments = useCallback(
     (timePosition: number): AudioSegment[] => {
@@ -489,6 +528,7 @@ export function useTimelineAudio() {
     moveSegment,
     moveSegmentToTrack,
     removeSegment,
+    removeTrackSegments,
     play,
     pause,
     stop: stopPlayback,

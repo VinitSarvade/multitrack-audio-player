@@ -15,6 +15,7 @@ export interface TimelineActions {
   play: () => void;
   pause: () => void;
   stop: () => void;
+  removeTrackSegments: (trackId: string) => void;
   isPlaying: boolean;
 }
 
@@ -42,6 +43,7 @@ export default function Timeline({ ref, tracks, onAddTrack, onRemoveTrack, onPla
     play: timeline.play,
     pause: timeline.pause,
     stop: timeline.stop,
+    removeTrackSegments: timeline.removeTrackSegments,
     isPlaying: timeline.isPlaying,
   }));
 

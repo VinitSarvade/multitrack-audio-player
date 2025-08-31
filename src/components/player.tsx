@@ -20,6 +20,7 @@ export default function Player() {
   };
 
   const removeTrack = (trackId: string) => {
+    timelineRef.current?.removeTrackSegments(trackId);
     setTracks(tracks.filter((track) => track.id !== trackId));
   };
 
