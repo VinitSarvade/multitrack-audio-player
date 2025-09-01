@@ -35,8 +35,7 @@ export default function Timeline({ ref, tracks, onAddTrack, onRemoveTrack, onPla
     effectiveContainerWidth
   );
   const { handleFileUpload } = useTimelineFileUpload({
-    segments: timeline.segments,
-    addSegment: timeline.addSegment,
+    addMultipleSegments: timeline.addMultipleSegments,
   });
 
   useImperativeHandle(ref, () => ({

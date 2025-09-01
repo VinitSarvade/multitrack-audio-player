@@ -530,32 +530,68 @@ export function useTimelineAudio() {
   const addMultipleSegments = useCallback(
     async (trackId: string, files: File[], startTime: number = 0) => {
       const audioContext = initializeAudioContext();
-      const segments: Record<string, AudioSegment> = {};
-      let currentStartTime = startTime;
-
-      for (const file of files) {
+      const decodePromises = files.map(async (file, index) => {
         try {
-          const segmentId = `${trackId}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+          const segmentId = `${trackId}-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 9)}`;
           const arrayBuffer = await file.arrayBuffer();
           const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-          segments[segmentId] = {
-            id: segmentId,
+          return {
+            segmentId,
             file,
-            buffer: audioBuffer,
-            startTime: currentStartTime,
+            audioBuffer,
             duration: audioBuffer.duration,
-            endTime: currentStartTime + audioBuffer.duration,
-            trackId,
-            isLoaded: true,
-            source: null,
           };
-
-          currentStartTime += audioBuffer.duration;
         } catch (error) {
           console.error('Error loading segment:', error);
+          return null;
         }
-      }
+      });
+
+      const decodedFiles = (await Promise.all(decodePromises)).filter(
+        (result): result is NonNullable<typeof result> => result !== null
+      );
+
+      // Calculate all positions first (find end of existing segments on this track)
+      const trackSegments = Object.values(state.segments).filter((seg) => seg.trackId === trackId);
+      const trackEndTime = trackSegments.length > 0 ? Math.max(...trackSegments.map((seg) => seg.endTime)) : 0;
+
+      const calculatedStartTime = Math.max(startTime, trackEndTime);
+
+      // Pre-calculate all segment positions
+      const segmentPositions = decodedFiles.reduce(
+        (positions, { duration }, index) => {
+          const segmentStartTime = index === 0 ? calculatedStartTime : positions[index - 1].endTime;
+
+          positions.push({
+            startTime: segmentStartTime,
+            endTime: segmentStartTime + duration,
+            duration,
+          });
+
+          return positions;
+        },
+        [] as Array<{ startTime: number; endTime: number; duration: number }>
+      );
+
+      // Create all segments with pre-calculated positions (parallel creation)
+      const segments: Record<string, AudioSegment> = {};
+
+      decodedFiles.forEach(({ segmentId, file, audioBuffer }, index) => {
+        const position = segmentPositions[index];
+
+        segments[segmentId] = {
+          id: segmentId,
+          file,
+          buffer: audioBuffer,
+          startTime: position.startTime,
+          duration: position.duration,
+          endTime: position.endTime,
+          trackId,
+          isLoaded: true,
+          source: null,
+        };
+      });
 
       setState(
         produce((draft) => {
@@ -566,7 +602,7 @@ export function useTimelineAudio() {
 
       return Object.keys(segments);
     },
-    [initializeAudioContext]
+    [initializeAudioContext, state.segments]
   );
 
   return {
