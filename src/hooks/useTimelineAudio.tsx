@@ -72,49 +72,6 @@ export function useTimelineAudio() {
     return audioContextRef.current;
   }, []);
 
-  // Load audio file and create segment
-  const addSegment = useCallback(
-    async (trackId: string, file: File, startTime: number = 0): Promise<string> => {
-      const audioContext = initializeAudioContext();
-      const segmentId = `${trackId}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-        const segment: AudioSegment = {
-          id: segmentId,
-          file,
-          buffer: audioBuffer,
-          startTime,
-          duration: audioBuffer.duration,
-          endTime: startTime + audioBuffer.duration,
-          trackId,
-          isLoaded: true,
-          source: null,
-        };
-
-        // Check for overlaps in the same track
-        if (hasOverlap(state.segments, trackId, startTime, segment.endTime, segmentId)) {
-          throw new Error('Segment overlaps with existing segment in the same track');
-        }
-
-        setState(
-          produce((draft) => {
-            draft.segments[segmentId] = segment;
-            draft.duration = calculateTimelineDuration(draft.segments);
-          })
-        );
-
-        return segmentId;
-      } catch (error) {
-        console.error('Error loading segment:', error);
-        throw error;
-      }
-    },
-    [state.segments, initializeAudioContext]
-  );
-
   // Move segment to new timeline position
   const moveSegment = useCallback(
     (segmentId: string, newStartTime: number): boolean => {
@@ -607,7 +564,6 @@ export function useTimelineAudio() {
 
   return {
     ...state,
-    addSegment,
     addMultipleSegments,
     batchUpdateSegments,
     moveSegment,
