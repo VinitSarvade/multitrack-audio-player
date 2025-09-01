@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { produce } from 'immer';
 
 import { hasOverlap } from '@/lib/utils/overlap-detector';
 
@@ -19,7 +20,7 @@ export interface TimelineState {
   duration: number; // Total timeline duration
   isPlaying: boolean;
   playbackRate: number; // 1.0 = normal speed
-  segments: Map<string, AudioSegment>;
+  segments: Record<string, AudioSegment>;
 }
 
 export function useTimelineAudio() {
@@ -32,13 +33,14 @@ export function useTimelineAudio() {
   const isPlayingRef = useRef<boolean>(false);
   const playbackRateRef = useRef<number>(1.0);
   const durationRef = useRef<number>(0);
+  const activeSourcesRef = useRef<AudioBufferSourceNode[]>([]);
 
   const [state, setState] = useState<TimelineState>({
     currentTime: 0,
     duration: 0,
     isPlaying: false,
     playbackRate: 1.0,
-    segments: new Map(),
+    segments: {},
   });
 
   // Initialize audio context
@@ -78,22 +80,19 @@ export function useTimelineAudio() {
           throw new Error('Segment overlaps with existing segment in the same track');
         }
 
-        setState((prev) => {
-          const newSegments = new Map(prev.segments);
-          newSegments.set(segmentId, segment);
+        setState(
+          produce((draft) => {
+            draft.segments[segmentId] = segment;
 
-          // Recalculate timeline duration
-          let maxEndTime = 0;
-          newSegments.forEach((seg) => {
-            maxEndTime = Math.max(maxEndTime, seg.endTime);
-          });
+            // Recalculate timeline duration
+            let maxEndTime = 0;
+            Object.values(draft.segments).forEach((seg) => {
+              maxEndTime = Math.max(maxEndTime, seg.endTime);
+            });
 
-          return {
-            ...prev,
-            segments: newSegments,
-            duration: Math.max(prev.duration, maxEndTime),
-          };
-        });
+            draft.duration = Math.max(draft.duration, maxEndTime);
+          })
+        );
 
         return segmentId;
       } catch (error) {
@@ -107,7 +106,7 @@ export function useTimelineAudio() {
   // Move segment to new timeline position
   const moveSegment = useCallback(
     (segmentId: string, newStartTime: number): boolean => {
-      const segment = state.segments.get(segmentId);
+      const segment = state.segments[segmentId];
       if (!segment) {
         console.error(`Cannot find segment ${segmentId} to move`);
         return false;
@@ -120,26 +119,23 @@ export function useTimelineAudio() {
         return false;
       }
 
-      setState((prev) => {
-        const newSegments = new Map(prev.segments);
-        newSegments.set(segmentId, {
-          ...segment,
-          startTime: newStartTime,
-          endTime: newEndTime,
-        });
+      setState(
+        produce((draft) => {
+          draft.segments[segmentId] = {
+            ...segment,
+            startTime: newStartTime,
+            endTime: newEndTime,
+          };
 
-        // Recalculate timeline duration
-        let maxEndTime = 0;
-        newSegments.forEach((seg) => {
-          maxEndTime = Math.max(maxEndTime, seg.endTime);
-        });
+          // Recalculate timeline duration
+          let maxEndTime = 0;
+          Object.values(draft.segments).forEach((seg) => {
+            maxEndTime = Math.max(maxEndTime, seg.endTime);
+          });
 
-        return {
-          ...prev,
-          segments: newSegments,
-          duration: Math.max(prev.duration, maxEndTime),
-        };
-      });
+          draft.duration = Math.max(draft.duration, maxEndTime);
+        })
+      );
 
       // If currently playing, reschedule playback to reflect the new segment position
       if (state.isPlaying) {
@@ -161,7 +157,7 @@ export function useTimelineAudio() {
   // Move segment to different track
   const moveSegmentToTrack = useCallback(
     (segmentId: string, newTrackId: string, newStartTime: number): boolean => {
-      const segment = state.segments.get(segmentId);
+      const segment = state.segments[segmentId];
       if (!segment) {
         console.error(`Cannot find segment ${segmentId} to move`);
         return false;
@@ -174,27 +170,24 @@ export function useTimelineAudio() {
         return false;
       }
 
-      setState((prev) => {
-        const newSegments = new Map(prev.segments);
-        newSegments.set(segmentId, {
-          ...segment,
-          trackId: newTrackId,
-          startTime: newStartTime,
-          endTime: newEndTime,
-        });
+      setState(
+        produce((draft) => {
+          draft.segments[segmentId] = {
+            ...segment,
+            trackId: newTrackId,
+            startTime: newStartTime,
+            endTime: newEndTime,
+          };
 
-        // Recalculate timeline duration
-        let maxEndTime = 0;
-        newSegments.forEach((seg) => {
-          maxEndTime = Math.max(maxEndTime, seg.endTime);
-        });
+          // Recalculate timeline duration
+          let maxEndTime = 0;
+          Object.values(draft.segments).forEach((seg) => {
+            maxEndTime = Math.max(maxEndTime, seg.endTime);
+          });
 
-        return {
-          ...prev,
-          segments: newSegments,
-          duration: Math.max(prev.duration, maxEndTime),
-        };
-      });
+          draft.duration = Math.max(draft.duration, maxEndTime);
+        })
+      );
 
       // If currently playing, reschedule playback to reflect the new segment position
       if (state.isPlaying) {
@@ -216,7 +209,7 @@ export function useTimelineAudio() {
   // Remove segment
   const removeSegment = useCallback(
     (segmentId: string) => {
-      const segment = state.segments.get(segmentId);
+      const segment = state.segments[segmentId];
       if (segment) {
         // Stop and disconnect
         if (segment.source) {
@@ -228,22 +221,19 @@ export function useTimelineAudio() {
         }
       }
 
-      setState((prev) => {
-        const newSegments = new Map(prev.segments);
-        newSegments.delete(segmentId);
+      setState(
+        produce((draft) => {
+          delete draft.segments[segmentId];
 
-        // Recalculate timeline duration
-        let maxEndTime = 0;
-        newSegments.forEach((seg) => {
-          maxEndTime = Math.max(maxEndTime, seg.endTime);
-        });
+          // Recalculate timeline duration
+          let maxEndTime = 0;
+          Object.values(draft.segments).forEach((seg) => {
+            maxEndTime = Math.max(maxEndTime, seg.endTime);
+          });
 
-        return {
-          ...prev,
-          segments: newSegments,
-          duration: maxEndTime,
-        };
-      });
+          draft.duration = maxEndTime;
+        })
+      );
     },
     [state.segments]
   );
@@ -253,7 +243,7 @@ export function useTimelineAudio() {
     (trackId: string) => {
       console.log(`Removing all segments for track ${trackId}`);
 
-      const trackSegments = Array.from(state.segments.values()).filter((segment) => segment.trackId === trackId);
+      const trackSegments = Object.values(state.segments).filter((segment) => segment.trackId === trackId);
 
       trackSegments.forEach((segment) => {
         if (segment.source) {
@@ -263,26 +253,24 @@ export function useTimelineAudio() {
         }
       });
 
-      setState((prev) => {
-        const newSegments = new Map(prev.segments);
+      setState(
+        produce((draft) => {
+          // Delete segments for this track
+          Object.keys(draft.segments).forEach((segmentId) => {
+            if (draft.segments[segmentId].trackId === trackId) {
+              delete draft.segments[segmentId];
+            }
+          });
 
-        Array.from(newSegments.entries()).forEach(([segmentId, segment]) => {
-          if (segment.trackId === trackId) {
-            newSegments.delete(segmentId);
-          }
-        });
+          // Recalculate timeline duration
+          let maxEndTime = 0;
+          Object.values(draft.segments).forEach((seg) => {
+            maxEndTime = Math.max(maxEndTime, seg.endTime);
+          });
 
-        let maxEndTime = 0;
-        newSegments.forEach((seg) => {
-          maxEndTime = Math.max(maxEndTime, seg.endTime);
-        });
-
-        return {
-          ...prev,
-          segments: newSegments,
-          duration: maxEndTime,
-        };
-      });
+          draft.duration = maxEndTime;
+        })
+      );
     },
     [state.segments]
   );
@@ -290,7 +278,7 @@ export function useTimelineAudio() {
   // Get segments that should be playing at given time
   const getActiveSegments = useCallback(
     (timePosition: number): AudioSegment[] => {
-      const allSegments = Array.from(state.segments.values());
+      const allSegments = Object.values(state.segments);
 
       const activeSegments = allSegments.filter((segment) => {
         const isInTimeRange = timePosition >= segment.startTime && timePosition < segment.endTime;
@@ -316,15 +304,21 @@ export function useTimelineAudio() {
     const elapsed = audioContextRef.current.currentTime - playbackStartTimeRef.current;
     const newCurrentTime = playbackStartPositionRef.current + elapsed * playbackRateRef.current;
 
-    setState((prev) => ({
-      ...prev,
-      currentTime: Math.min(newCurrentTime, prev.duration),
-    }));
+    setState(
+      produce((draft) => {
+        draft.currentTime = Math.min(newCurrentTime, draft.duration);
+      })
+    );
 
     // Stop playback if we've reached the end
     if (newCurrentTime >= durationRef.current) {
       isPlayingRef.current = false;
-      setState((prev) => ({ ...prev, isPlaying: false, currentTime: 0 }));
+      setState(
+        produce((draft) => {
+          draft.isPlaying = false;
+          draft.currentTime = 0;
+        })
+      );
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -338,7 +332,7 @@ export function useTimelineAudio() {
   const play = useCallback(
     (startTime?: number) => {
       const audioContext = initializeAudioContext();
-      if (state.segments.size === 0) return;
+      if (Object.keys(state.segments).length === 0) return;
 
       const playbackTime = startTime !== undefined ? startTime : state.currentTime;
 
@@ -361,59 +355,62 @@ export function useTimelineAudio() {
       }
 
       // Stop all existing sources
-      state.segments.forEach((segment) => {
-        if (segment.source) {
-          try {
-            segment.source.stop();
-          } catch {} // Ignore if already stopped
-        }
+      activeSourcesRef.current.forEach((source) => {
+        try {
+          source.stop();
+        } catch {} // Ignore if already stopped
       });
+      activeSourcesRef.current = [];
 
-      const newSegments = new Map(state.segments);
+      const newSources: AudioBufferSourceNode[] = [];
 
-      // Schedule all segments up front, including those starting in the future
-      newSegments.forEach((segment, id) => {
-        if (segment.buffer && segment.isLoaded) {
-          const source = audioContext.createBufferSource();
-          source.buffer = segment.buffer;
-          source.connect(masterGainRef.current!);
+      setState(
+        produce((draft) => {
+          // Schedule all segments up front, including those starting in the future
+          Object.entries(draft.segments).forEach(([id, segment]) => {
+            if (segment.buffer && segment.isLoaded) {
+              const source = audioContext.createBufferSource();
+              source.buffer = segment.buffer;
+              source.connect(masterGainRef.current!);
 
-          try {
-            source.playbackRate.value = state.playbackRate;
-          } catch {}
+              try {
+                source.playbackRate.value = state.playbackRate;
+              } catch {}
 
-          // Calculate offset and remaining duration relative to current playhead
-          const segmentOffset = Math.max(0, playbackTime - segment.startTime);
-          const remainingDuration = segment.duration - segmentOffset;
+              // Calculate offset and remaining duration relative to current playhead
+              const segmentOffset = Math.max(0, playbackTime - segment.startTime);
+              const remainingDuration = segment.duration - segmentOffset;
 
-          // If the segment has already completed, skip scheduling
-          if (remainingDuration <= 0) {
-            newSegments.set(id, { ...segment, source: null });
-            return;
-          }
+              // If the segment has already completed, skip scheduling
+              if (remainingDuration <= 0) {
+                draft.segments[id] = { ...segment, source: null };
+                return;
+              }
 
-          // Start immediately if within segment, otherwise at a future context time
-          const when =
-            segment.startTime <= playbackTime
-              ? now
-              : now + (segment.startTime - playbackTime) / Math.max(0.0001, state.playbackRate);
+              // Start immediately if within segment, otherwise at a future context time
+              const when =
+                segment.startTime <= playbackTime
+                  ? now
+                  : now + (segment.startTime - playbackTime) / Math.max(0.0001, state.playbackRate);
 
-          try {
-            source.start(when, segmentOffset, remainingDuration);
-            newSegments.set(id, { ...segment, source });
-          } catch (error) {
-            console.error(`Failed to schedule segment ${segment.id}:`, error);
-            newSegments.set(id, { ...segment, source: null });
-          }
-        }
-      });
+              try {
+                source.start(when, segmentOffset, remainingDuration);
+                draft.segments[id] = { ...segment, source };
+                newSources.push(source); // Track active source
+              } catch (error) {
+                console.error(`Failed to schedule segment ${segment.id}:`, error);
+                draft.segments[id] = { ...segment, source: null };
+              }
+            }
+          });
 
-      setState((prev) => ({
-        ...prev,
-        segments: newSegments,
-        isPlaying: true,
-        currentTime: playbackTime, // Update current time if specified
-      }));
+          draft.isPlaying = true;
+          draft.currentTime = playbackTime; // Update current time if specified
+        })
+      );
+
+      // Store active sources for pause/stop
+      activeSourcesRef.current = newSources;
 
       // Mark playing true in ref (already set above; keep for clarity)
       isPlayingRef.current = true;
@@ -442,28 +439,36 @@ export function useTimelineAudio() {
 
   // Pause playback
   const pause = useCallback(() => {
-    setState((prev) => ({ ...prev, isPlaying: false }));
-
-    // Stop all sources
-    state.segments.forEach((segment) => {
-      if (segment.source) {
-        try {
-          segment.source.stop();
-        } catch {
-          // Ignore if already stopped
-        }
+    // Stop all sources FIRST
+    activeSourcesRef.current.forEach((source) => {
+      try {
+        source.stop();
+      } catch {
+        // Ignore if already stopped
       }
     });
+    activeSourcesRef.current = [];
 
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
-  }, [state.segments]);
+
+    // Then update state
+    setState(
+      produce((draft) => {
+        draft.isPlaying = false;
+      })
+    );
+  }, []);
 
   // Stop playback and reset to beginning
   const stopPlayback = useCallback(() => {
     pause();
-    setState((prev) => ({ ...prev, currentTime: 0 }));
+    setState(
+      produce((draft) => {
+        draft.currentTime = 0;
+      })
+    );
   }, [pause]);
 
   // Seek to specific time position
@@ -477,7 +482,7 @@ export function useTimelineAudio() {
           cancelAnimationFrame(animationFrameRef.current);
         }
 
-        state.segments.forEach((segment) => {
+        Object.values(state.segments).forEach((segment) => {
           if (segment.source) {
             try {
               segment.source.stop();
@@ -488,7 +493,12 @@ export function useTimelineAudio() {
         });
       }
 
-      setState((prev) => ({ ...prev, currentTime: clampedTime, isPlaying: false }));
+      setState(
+        produce((draft) => {
+          draft.currentTime = clampedTime;
+          draft.isPlaying = false;
+        })
+      );
 
       if (wasPlaying) {
         setTimeout(() => {
@@ -504,15 +514,14 @@ export function useTimelineAudio() {
       cancelAnimationFrame(animationFrameRef.current);
     }
 
-    state.segments.forEach((segment) => {
-      if (segment.source) {
-        try {
-          segment.source.stop();
-        } catch {
-          // Ignore
-        }
+    activeSourcesRef.current.forEach((source) => {
+      try {
+        source.stop();
+      } catch {
+        // Ignore
       }
     });
+    activeSourcesRef.current = [];
 
     if (audioContextRef.current) {
       audioContextRef.current.close();
@@ -520,7 +529,7 @@ export function useTimelineAudio() {
     }
 
     masterGainRef.current = null;
-  }, [state.segments]);
+  }, []);
 
   return {
     ...state,
