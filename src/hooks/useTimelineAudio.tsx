@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { produce } from 'immer';
 
 import { hasOverlap } from '@/lib/utils/overlap-detector';
+
+const calculateTimelineDuration = (segments: Record<string, AudioSegment>): number => {
+  return Math.max(0, ...Object.values(segments).map((seg) => seg.endTime));
+};
 
 export interface AudioSegment {
   id: string;
@@ -43,6 +47,21 @@ export function useTimelineAudio() {
     segments: {},
   });
 
+  const segmentsByTrack = useMemo(() => {
+    const byTrack: Record<string, AudioSegment[]> = {};
+    Object.values(state.segments).forEach((segment) => {
+      if (!byTrack[segment.trackId]) {
+        byTrack[segment.trackId] = [];
+      }
+      byTrack[segment.trackId].push(segment);
+    });
+    return byTrack;
+  }, [state.segments]);
+
+  const sortedSegments = useMemo(() => {
+    return Object.values(state.segments).sort((a, b) => a.startTime - b.startTime);
+  }, [state.segments]);
+
   // Initialize audio context
   const initializeAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
@@ -83,14 +102,7 @@ export function useTimelineAudio() {
         setState(
           produce((draft) => {
             draft.segments[segmentId] = segment;
-
-            // Recalculate timeline duration
-            let maxEndTime = 0;
-            Object.values(draft.segments).forEach((seg) => {
-              maxEndTime = Math.max(maxEndTime, seg.endTime);
-            });
-
-            draft.duration = Math.max(draft.duration, maxEndTime);
+            draft.duration = calculateTimelineDuration(draft.segments);
           })
         );
 
@@ -126,14 +138,7 @@ export function useTimelineAudio() {
             startTime: newStartTime,
             endTime: newEndTime,
           };
-
-          // Recalculate timeline duration
-          let maxEndTime = 0;
-          Object.values(draft.segments).forEach((seg) => {
-            maxEndTime = Math.max(maxEndTime, seg.endTime);
-          });
-
-          draft.duration = Math.max(draft.duration, maxEndTime);
+          draft.duration = calculateTimelineDuration(draft.segments);
         })
       );
 
@@ -178,14 +183,7 @@ export function useTimelineAudio() {
             startTime: newStartTime,
             endTime: newEndTime,
           };
-
-          // Recalculate timeline duration
-          let maxEndTime = 0;
-          Object.values(draft.segments).forEach((seg) => {
-            maxEndTime = Math.max(maxEndTime, seg.endTime);
-          });
-
-          draft.duration = Math.max(draft.duration, maxEndTime);
+          draft.duration = calculateTimelineDuration(draft.segments);
         })
       );
 
@@ -224,14 +222,7 @@ export function useTimelineAudio() {
       setState(
         produce((draft) => {
           delete draft.segments[segmentId];
-
-          // Recalculate timeline duration
-          let maxEndTime = 0;
-          Object.values(draft.segments).forEach((seg) => {
-            maxEndTime = Math.max(maxEndTime, seg.endTime);
-          });
-
-          draft.duration = maxEndTime;
+          draft.duration = calculateTimelineDuration(draft.segments);
         })
       );
     },
@@ -261,14 +252,7 @@ export function useTimelineAudio() {
               delete draft.segments[segmentId];
             }
           });
-
-          // Recalculate timeline duration
-          let maxEndTime = 0;
-          Object.values(draft.segments).forEach((seg) => {
-            maxEndTime = Math.max(maxEndTime, seg.endTime);
-          });
-
-          draft.duration = maxEndTime;
+          draft.duration = calculateTimelineDuration(draft.segments);
         })
       );
     },
@@ -531,9 +515,65 @@ export function useTimelineAudio() {
     masterGainRef.current = null;
   }, []);
 
+  const batchUpdateSegments = useCallback(
+    (updateFn: (segments: Record<string, AudioSegment>) => Record<string, AudioSegment>) => {
+      setState(
+        produce((draft) => {
+          draft.segments = updateFn(draft.segments);
+          draft.duration = calculateTimelineDuration(draft.segments);
+        })
+      );
+    },
+    []
+  );
+
+  const addMultipleSegments = useCallback(
+    async (trackId: string, files: File[], startTime: number = 0) => {
+      const audioContext = initializeAudioContext();
+      const segments: Record<string, AudioSegment> = {};
+      let currentStartTime = startTime;
+
+      for (const file of files) {
+        try {
+          const segmentId = `${trackId}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+          const arrayBuffer = await file.arrayBuffer();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+          segments[segmentId] = {
+            id: segmentId,
+            file,
+            buffer: audioBuffer,
+            startTime: currentStartTime,
+            duration: audioBuffer.duration,
+            endTime: currentStartTime + audioBuffer.duration,
+            trackId,
+            isLoaded: true,
+            source: null,
+          };
+
+          currentStartTime += audioBuffer.duration;
+        } catch (error) {
+          console.error('Error loading segment:', error);
+        }
+      }
+
+      setState(
+        produce((draft) => {
+          Object.assign(draft.segments, segments);
+          draft.duration = calculateTimelineDuration(draft.segments);
+        })
+      );
+
+      return Object.keys(segments);
+    },
+    [initializeAudioContext]
+  );
+
   return {
     ...state,
     addSegment,
+    addMultipleSegments,
+    batchUpdateSegments,
     moveSegment,
     moveSegmentToTrack,
     removeSegment,
@@ -544,6 +584,8 @@ export function useTimelineAudio() {
     seekTo,
 
     getActiveSegments,
+    segmentsByTrack,
+    sortedSegments,
     cleanup,
   };
 }
