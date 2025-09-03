@@ -10,7 +10,7 @@ import TimelineTrack from './timeline-track';
 
 interface TimelineGridProps {
   tracks: Array<{ id: string }>;
-  segments: Map<string, AudioSegment>;
+  segments: Record<string, AudioSegment>;
   currentTime: number;
   isPlaying: boolean;
   displayDuration: number;
@@ -50,7 +50,7 @@ export default function TimelineGrid({
 }: TimelineGridProps) {
   const handleDragEnd = (event: DragEndEvent) => {
     const segmentId = String(event.active.id);
-    const segment = Array.from(segments.values()).find((s) => s.id === segmentId);
+    const segment = Object.values(segments).find((s) => s.id === segmentId);
     if (!segment) return;
 
     const deltaX = event.delta.x || 0;
@@ -82,7 +82,7 @@ export default function TimelineGrid({
           <div className="col-span-1 bg-surface">
             <div className="h-12 border-b border-border bg-surface-2" />
             {tracks.map((track, index) => {
-              const trackSegments = Array.from(segments.values()).filter((s) => s.trackId === track.id);
+              const trackSegments = Object.values(segments).filter((s) => s.trackId === track.id);
               const hasActiveSegment = trackSegments.some(
                 (segment) => currentTime >= segment.startTime && currentTime < segment.endTime
               );
@@ -148,7 +148,7 @@ export default function TimelineGrid({
                     key={track.id}
                     trackId={track.id}
                     trackName={`Track ${index + 1}`}
-                    segments={Array.from(segments.values()).filter((segment) => segment.trackId === track.id)}
+                    segments={Object.values(segments).filter((segment) => segment.trackId === track.id)}
                     currentTime={currentTime}
                     pixelsPerSecond={PIXELS_PER_SECOND}
                     timeToPixels={timeToPixels}

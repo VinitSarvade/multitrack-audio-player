@@ -1,13 +1,13 @@
 import type { AudioSegment } from '@/hooks/useTimelineAudio';
 
 export function hasOverlap(
-  segments: Map<string, AudioSegment>,
+  segments: Record<string, AudioSegment>,
   trackId: string,
   startTime: number,
   endTime: number,
   excludeSegmentId?: string
 ): boolean {
-  return Array.from(segments.values()).some((existingSegment) => {
+  return Object.values(segments).some((existingSegment) => {
     if (existingSegment.trackId !== trackId) return false;
     if (excludeSegmentId && existingSegment.id === excludeSegmentId) return false;
 
@@ -20,7 +20,7 @@ export function hasOverlap(
 }
 
 export function validateSegmentPlacement(
-  segments: Map<string, AudioSegment>,
+  segments: Record<string, AudioSegment>,
   trackId: string,
   startTime: number,
   duration: number,

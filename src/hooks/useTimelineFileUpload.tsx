@@ -3,14 +3,14 @@ import { useCallback } from 'react';
 import { AudioSegment } from './useTimelineAudio';
 
 interface UseTimelineFileUploadProps {
-  segments: Map<string, AudioSegment>;
+  segments: Record<string, AudioSegment>;
   addSegment: (trackId: string, file: File, startTime?: number) => Promise<string>;
 }
 
 export function useTimelineFileUpload({ segments, addSegment }: UseTimelineFileUploadProps) {
   const handleFileUpload = useCallback(
     async (trackId: string, files: File[]) => {
-      const trackSegments = Array.from(segments.values()).filter((segment) => segment.trackId === trackId);
+      const trackSegments = Object.values(segments).filter((segment) => segment.trackId === trackId);
       let nextStartTime = trackSegments.length > 0 ? Math.max(...trackSegments.map((s) => s.endTime)) : 0;
 
       const fileData: Array<{ file: File; duration: number; startTime: number }> = [];
