@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { produce } from 'immer';
 
 import { hasOverlap } from '@/lib/utils/overlap-detector';
+
+const calculateTimelineDuration = (segments: Record<string, AudioSegment>): number => {
+  return Math.max(0, ...Object.values(segments).map((seg) => seg.endTime));
+};
 
 export interface AudioSegment {
   id: string;
@@ -43,6 +47,21 @@ export function useTimelineAudio() {
     segments: {},
   });
 
+  const segmentsByTrack = useMemo(() => {
+    const byTrack: Record<string, AudioSegment[]> = {};
+    Object.values(state.segments).forEach((segment) => {
+      if (!byTrack[segment.trackId]) {
+        byTrack[segment.trackId] = [];
+      }
+      byTrack[segment.trackId].push(segment);
+    });
+    return byTrack;
+  }, [state.segments]);
+
+  const sortedSegments = useMemo(() => {
+    return Object.values(state.segments).sort((a, b) => a.startTime - b.startTime);
+  }, [state.segments]);
+
   // Initialize audio context
   const initializeAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
@@ -52,56 +71,6 @@ export function useTimelineAudio() {
     }
     return audioContextRef.current;
   }, []);
-
-  // Load audio file and create segment
-  const addSegment = useCallback(
-    async (trackId: string, file: File, startTime: number = 0): Promise<string> => {
-      const audioContext = initializeAudioContext();
-      const segmentId = `${trackId}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-        const segment: AudioSegment = {
-          id: segmentId,
-          file,
-          buffer: audioBuffer,
-          startTime,
-          duration: audioBuffer.duration,
-          endTime: startTime + audioBuffer.duration,
-          trackId,
-          isLoaded: true,
-          source: null,
-        };
-
-        // Check for overlaps in the same track
-        if (hasOverlap(state.segments, trackId, startTime, segment.endTime, segmentId)) {
-          throw new Error('Segment overlaps with existing segment in the same track');
-        }
-
-        setState(
-          produce((draft) => {
-            draft.segments[segmentId] = segment;
-
-            // Recalculate timeline duration
-            let maxEndTime = 0;
-            Object.values(draft.segments).forEach((seg) => {
-              maxEndTime = Math.max(maxEndTime, seg.endTime);
-            });
-
-            draft.duration = Math.max(draft.duration, maxEndTime);
-          })
-        );
-
-        return segmentId;
-      } catch (error) {
-        console.error('Error loading segment:', error);
-        throw error;
-      }
-    },
-    [state.segments, initializeAudioContext]
-  );
 
   // Move segment to new timeline position
   const moveSegment = useCallback(
@@ -126,14 +95,7 @@ export function useTimelineAudio() {
             startTime: newStartTime,
             endTime: newEndTime,
           };
-
-          // Recalculate timeline duration
-          let maxEndTime = 0;
-          Object.values(draft.segments).forEach((seg) => {
-            maxEndTime = Math.max(maxEndTime, seg.endTime);
-          });
-
-          draft.duration = Math.max(draft.duration, maxEndTime);
+          draft.duration = calculateTimelineDuration(draft.segments);
         })
       );
 
@@ -178,14 +140,7 @@ export function useTimelineAudio() {
             startTime: newStartTime,
             endTime: newEndTime,
           };
-
-          // Recalculate timeline duration
-          let maxEndTime = 0;
-          Object.values(draft.segments).forEach((seg) => {
-            maxEndTime = Math.max(maxEndTime, seg.endTime);
-          });
-
-          draft.duration = Math.max(draft.duration, maxEndTime);
+          draft.duration = calculateTimelineDuration(draft.segments);
         })
       );
 
@@ -224,14 +179,7 @@ export function useTimelineAudio() {
       setState(
         produce((draft) => {
           delete draft.segments[segmentId];
-
-          // Recalculate timeline duration
-          let maxEndTime = 0;
-          Object.values(draft.segments).forEach((seg) => {
-            maxEndTime = Math.max(maxEndTime, seg.endTime);
-          });
-
-          draft.duration = maxEndTime;
+          draft.duration = calculateTimelineDuration(draft.segments);
         })
       );
     },
@@ -261,14 +209,7 @@ export function useTimelineAudio() {
               delete draft.segments[segmentId];
             }
           });
-
-          // Recalculate timeline duration
-          let maxEndTime = 0;
-          Object.values(draft.segments).forEach((seg) => {
-            maxEndTime = Math.max(maxEndTime, seg.endTime);
-          });
-
-          draft.duration = maxEndTime;
+          draft.duration = calculateTimelineDuration(draft.segments);
         })
       );
     },
@@ -531,9 +472,100 @@ export function useTimelineAudio() {
     masterGainRef.current = null;
   }, []);
 
+  const batchUpdateSegments = useCallback(
+    (updateFn: (segments: Record<string, AudioSegment>) => Record<string, AudioSegment>) => {
+      setState(
+        produce((draft) => {
+          draft.segments = updateFn(draft.segments);
+          draft.duration = calculateTimelineDuration(draft.segments);
+        })
+      );
+    },
+    []
+  );
+
+  const addMultipleSegments = useCallback(
+    async (trackId: string, files: File[], startTime: number = 0) => {
+      const audioContext = initializeAudioContext();
+      const decodePromises = files.map(async (file, index) => {
+        try {
+          const segmentId = `${trackId}-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 9)}`;
+          const arrayBuffer = await file.arrayBuffer();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+          return {
+            segmentId,
+            file,
+            audioBuffer,
+            duration: audioBuffer.duration,
+          };
+        } catch (error) {
+          console.error('Error loading segment:', error);
+          return null;
+        }
+      });
+
+      const decodedFiles = (await Promise.all(decodePromises)).filter(
+        (result): result is NonNullable<typeof result> => result !== null
+      );
+
+      // Calculate all positions first (find end of existing segments on this track)
+      const trackSegments = Object.values(state.segments).filter((seg) => seg.trackId === trackId);
+      const trackEndTime = trackSegments.length > 0 ? Math.max(...trackSegments.map((seg) => seg.endTime)) : 0;
+
+      const calculatedStartTime = Math.max(startTime, trackEndTime);
+
+      // Pre-calculate all segment positions
+      const segmentPositions = decodedFiles.reduce(
+        (positions, { duration }, index) => {
+          const segmentStartTime = index === 0 ? calculatedStartTime : positions[index - 1].endTime;
+
+          positions.push({
+            startTime: segmentStartTime,
+            endTime: segmentStartTime + duration,
+            duration,
+          });
+
+          return positions;
+        },
+        [] as Array<{ startTime: number; endTime: number; duration: number }>
+      );
+
+      // Create all segments with pre-calculated positions (parallel creation)
+      const segments: Record<string, AudioSegment> = {};
+
+      decodedFiles.forEach(({ segmentId, file, audioBuffer }, index) => {
+        const position = segmentPositions[index];
+
+        segments[segmentId] = {
+          id: segmentId,
+          file,
+          buffer: audioBuffer,
+          startTime: position.startTime,
+          duration: position.duration,
+          endTime: position.endTime,
+          trackId,
+          isLoaded: true,
+          source: null,
+        };
+      });
+
+      setState(
+        produce((draft) => {
+          Object.assign(draft.segments, segments);
+          draft.duration = calculateTimelineDuration(draft.segments);
+        })
+      );
+
+      return Object.keys(segments);
+    },
+    [initializeAudioContext, state.segments]
+  );
+
   return {
     ...state,
-    addSegment,
+    addMultipleSegments,
+    batchUpdateSegments,
     moveSegment,
     moveSegmentToTrack,
     removeSegment,
@@ -544,6 +576,8 @@ export function useTimelineAudio() {
     seekTo,
 
     getActiveSegments,
+    segmentsByTrack,
+    sortedSegments,
     cleanup,
   };
 }
